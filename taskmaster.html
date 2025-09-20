@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Space+Grotesk%3Awght%40400%3B500%3B700"
+    />
+    <title>TaskMaster - 待办事项管理</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(255,255,255)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');
+        }
+        
+        /* 白天主题 */
+        .light-theme {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --accent-color: #0d6efd;
+        }
+        
+        /* 黑夜主题 */
+        .dark-theme {
+            --bg-primary: #111418;
+            --bg-secondary: #1c2127;
+            --bg-tertiary: #283039;
+            --text-primary: #ffffff;
+            --text-secondary: #9dabb9;
+            --border-color: #3b4754;
+            --accent-color: #1380ec;
+        }
+        
+        .theme-transition {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        .completed-task {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+        
+        .task-item:hover {
+            background-color: var(--bg-tertiary);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="dark-theme theme-transition" style="font-family: 'Space Grotesk', 'Noto Sans', sans-serif;">
+    <div class="relative flex size-full min-h-screen flex-col theme-transition" style="background-color: var(--bg-primary);">
+        <div class="layout-container flex h-full grow flex-col">
+            <!-- 头部 -->
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid px-10 py-3 theme-transition" style="border-color: var(--border-color);">
+                <div class="flex items-center gap-4" style="color: var(--text-primary);">
+                    <div class="size-4">
+                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">TaskMaster</h2>
+                </div>
+                <div class="flex flex-1 justify-end gap-8 items-center">
+                    <!-- 全局搜索 -->
+                    <label class="flex flex-col min-w-40 !h-10 max-w-64">
+                        <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+                            <div class="flex border-none items-center justify-center pl-4 rounded-l-xl border-r-0 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-secondary);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+                                </svg>
+                            </div>
+                            <input
+                                id="globalSearch"
+                                placeholder="搜索任务"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl focus:outline-0 focus:ring-0 border-none h-full px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal theme-transition"
+                                style="background-color: var(--bg-tertiary); color: var(--text-primary);"
+                            />
+                        </div>
+                    </label>
+                    
+                    <!-- 主题切换按钮 -->
+                    <button id="themeToggle" class="flex items-center justify-center w-10 h-10 rounded-full theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);" title="切换主题">
+                        <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256" class="hidden">
+                            <path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,1,69.66,58.34l16,16a8,8,0,0,1-11.32,11.32Zm0,116.68-16-16a8,8,0,0,1,11.32-11.32l16,16a8,8,0,0,1-11.32,11.32ZM192,72a8,8,0,0,1,5.66-2.34l16-16a8,8,0,0,1,11.32,11.32l-16,16A8,8,0,0,1,192,72Zm5.66,114.34a8,8,0,0,1-11.32,11.32l-16-16a8,8,0,0,1,11.32-11.32ZM48,128a8,8,0,0,1-8-8H16a8,8,0,0,1,0-16H40A8,8,0,0,1,48,128Zm80,80a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h24A8,8,0,0,1,128,208Zm112-88H216a8,8,0,0,1,0-16h24a8,8,0,0,1,0,16Z"></path>
+                        </svg>
+                        <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- 用户头像 -->
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDWOtnddhOfkS20zlLdTBLfg23-Bk8F7Etkc_ohqsTwv7hb5cgTop-BT58cRBlTYolrjHPWuwZOijOIvdolxlH3Ylg0-y8t9OCJ_KcsiLuIJUVgYso32m4hB3o9pLY4pyJulOR6vr55c_WBLG-Q8GUUu0Ga0ccPhzawWelgncPKdxjAfyeAuWXCLFeilwW-AxA8GhhPy3azQ7ehlgeFzHZpVPe0P3Ah9WEI9jYSx7fc2VnJZZWSCInCm56v5NXwOT_HhB20SdfG7rE");'></div>
+                </div>
+            </header>
+            
+            <!-- 主要内容区域 -->
+            <div class="px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    <!-- 标题和统计 -->
+                    <div class="flex flex-wrap justify-between gap-3 p-4">
+                        <p class="tracking-light text-[32px] font-bold leading-tight min-w-72 theme-transition" style="color: var(--text-primary);">我的任务</p>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm theme-transition" style="color: var(--text-secondary);">总计: <span id="totalCount">0</span></span>
+                            <span class="text-sm theme-transition" style="color: var(--text-secondary);">已完成: <span id="completedCount">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 任务搜索 -->
+                    <div class="px-4 py-3">
+                        <label class="flex flex-col min-w-40 h-12 w-full">
+                            <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+                                <div class="flex border-none items-center justify-center pl-4 rounded-l-xl border-r-0 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-secondary);">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+                                    </svg>
+                                </div>
+                                <input
+                                    id="taskSearch"
+                                    placeholder="搜索任务"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl focus:outline-0 focus:ring-0 border-none h-full px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal theme-transition"
+                                    style="background-color: var(--bg-tertiary); color: var(--text-primary);"
+                                />
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- 筛选按钮 -->
+                    <div class="flex gap-3 p-3 flex-wrap pr-4">
+                        <button class="filter-btn active flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" data-filter="all" style="background-color: var(--accent-color); color: white;">
+                            <p class="text-sm font-medium leading-normal">全部</p>
+                        </button>
+                        <button class="filter-btn flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" data-filter="active" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                            <p class="text-sm font-medium leading-normal">进行中</p>
+                        </button>
+                        <button class="filter-btn flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" data-filter="completed" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                            <p class="text-sm font-medium leading-normal">已完成</p>
+                        </button>
+                        <button id="clearCompleted" class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                            <p class="text-sm font-medium leading-normal">清除已完成</p>
+                        </button>
+                    </div>
+                    
+                    <!-- 数据管理按钮 -->
+                    <div class="flex gap-3 p-3 flex-wrap pr-4 border-t" style="border-color: var(--border-color);">
+                        <button id="exportData" class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            <p class="text-sm font-medium leading-normal">导出数据</p>
+                        </button>
+                        <button id="importData" class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                 <polyline points="17,8 12,3 7,8"/>
+                                 <line x1="12" y1="3" x2="12" y2="15"/>
+                             </svg>
+                             <p class="text-sm font-medium leading-normal">导入文件</p>
+                         </button>
+                         <button id="importClipboard" class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                                 <polyline points="17,8 12,3 7,8"/>
+                                 <line x1="12" y1="3" x2="12" y2="15"/>
+                             </svg>
+                             <p class="text-sm font-medium leading-normal">从剪贴板</p>
+                         </button>
+                         <input type="file" id="importFile" accept=".json" style="display: none;">
+                    </div>
+                    
+                    <!-- 添加新任务 -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <input
+                                id="newTaskInput"
+                                placeholder="添加新任务"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl focus:outline-0 focus:ring-0 border h-14 p-[15px] text-base font-normal leading-normal theme-transition"
+                                style="border-color: var(--border-color); background-color: var(--bg-secondary); color: var(--text-primary);"
+                            />
+                        </label>
+                        <button id="addTaskBtn" class="flex h-14 items-center justify-center px-6 rounded-xl font-medium theme-transition" style="background-color: var(--accent-color); color: white;">
+                            添加
+                        </button>
+                    </div>
+                    
+                    <!-- 任务列表 -->
+                    <div id="taskList" class="flex flex-col gap-2 px-4">
+                        <!-- 任务项将通过JavaScript动态生成 -->
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div id="emptyState" class="flex flex-col items-center justify-center py-16 hidden">
+                        <div class="text-6xl mb-4">📝</div>
+                        <p class="text-xl font-medium mb-2 theme-transition" style="color: var(--text-primary);">暂无任务</p>
+                        <p class="theme-transition" style="color: var(--text-secondary);">添加你的第一个任务开始管理吧！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 任务管理类
+        class TaskManager {
+            constructor() {
+                this.tasks = [];
+                this.currentFilter = 'all';
+                this.currentTheme = 'dark';
+                this.storage = localforage.createInstance({
+                    name: 'TaskMaster',
+                    storeName: 'tasks_store',
+                    description: '待办事项数据存储'
+                });
+                this.init();
+            }
+            
+            async init() {
+                try {
+                    // 加载任务数据
+                    const savedTasks = await this.storage.getItem('tasks');
+                    this.tasks = savedTasks || [];
+                    
+                    // 加载主题设置
+                    const savedTheme = await this.storage.getItem('theme');
+                    this.currentTheme = savedTheme || 'dark';
+                    
+                    this.bindEvents();
+                    this.applyTheme();
+                    this.render();
+                    this.updateStats();
+                } catch (error) {
+                    console.error('初始化数据加载失败:', error);
+                    // 降级到默认值
+                    this.tasks = [];
+                    this.currentTheme = 'dark';
+                    this.bindEvents();
+                    this.applyTheme();
+                    this.render();
+                    this.updateStats();
+                }
+            }
+            
+            bindEvents() {
+                // 添加任务
+                document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
+                document.getElementById('newTaskInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addTask();
+                });
+                
+                // 搜索功能
+                document.getElementById('taskSearch').addEventListener('input', (e) => this.searchTasks(e.target.value));
+                document.getElementById('globalSearch').addEventListener('input', (e) => this.searchTasks(e.target.value));
+                
+                // 筛选按钮
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setFilter(e.target.closest('.filter-btn').dataset.filter));
+                });
+                
+                // 清除已完成任务
+                document.getElementById('clearCompleted').addEventListener('click', () => this.clearCompleted());
+                
+                // 主题切换
+                document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
+                
+                // 数据导出
+                document.getElementById('exportData').addEventListener('click', () => this.exportData());
+                
+                // 数据导入（文件）
+                document.getElementById('importData').addEventListener('click', () => {
+                    document.getElementById('importFile').click();
+                });
+                
+                document.getElementById('importFile').addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        await this.importData(file);
+                        e.target.value = ''; // 清空文件选择
+                    }
+                });
+                
+                // 数据导入（剪贴板）
+                document.getElementById('importClipboard').addEventListener('click', () => {
+                    this.importFromClipboard();
+                });
+            }
+            
+            async addTask() {
+                const input = document.getElementById('newTaskInput');
+                const text = input.value.trim();
+                
+                if (!text) return;
+                
+                const task = {
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    dueDate: null
+                };
+                
+                this.tasks.unshift(task);
+                await this.saveTasks();
+                input.value = '';
+                this.render();
+                this.updateStats();
+            }
+            
+            async toggleTask(id) {
+                const task = this.tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    task.completedAt = task.completed ? new Date().toISOString() : null;
+                    await this.saveTasks();
+                    this.render();
+                    this.updateStats();
+                }
+            }
+            
+            async deleteTask(id) {
+                const result = await Swal.fire({
+                    title: '确定要删除这个任务吗？',
+                    text: '删除后将无法恢复！',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '确定删除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                });
+
+                if (result.isConfirmed) {
+                    this.tasks = this.tasks.filter(t => t.id !== id);
+                    await this.saveTasks();
+                    this.render();
+                    this.updateStats();
+                    
+                    Swal.fire({
+                        title: '已删除！',
+                        text: '任务已成功删除。',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            }
+            
+            async editTask(id, newText) {
+                const task = this.tasks.find(t => t.id === id);
+                if (task && newText.trim()) {
+                    task.text = newText.trim();
+                    task.updatedAt = new Date().toISOString();
+                    await this.saveTasks();
+                    this.render();
+                }
+            }
+            
+            setFilter(filter) {
+                this.currentFilter = filter;
+                
+                // 更新按钮状态
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.filter === filter) {
+                        btn.classList.add('active');
+                        btn.style.backgroundColor = 'var(--accent-color)';
+                        btn.style.color = 'white';
+                    } else {
+                        btn.style.backgroundColor = 'var(--bg-tertiary)';
+                        btn.style.color = 'var(--text-primary)';
+                    }
+                });
+                
+                this.render();
+            }
+            
+            searchTasks(query) {
+                const searchQuery = query.toLowerCase();
+                document.getElementById('taskSearch').value = query;
+                document.getElementById('globalSearch').value = query;
+                
+                const taskItems = document.querySelectorAll('.task-item');
+                taskItems.forEach(item => {
+                    const text = item.querySelector('.task-text').textContent.toLowerCase();
+                    if (text.includes(searchQuery)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                this.updateEmptyState();
+            }
+            
+            async clearCompleted() {
+                const completedCount = this.tasks.filter(t => t.completed).length;
+                if (completedCount === 0) {
+                    Swal.fire({
+                        title: '提示',
+                        text: '没有已完成的任务需要清除',
+                        icon: 'info',
+                        confirmButtonText: '确定'
+                    });
+                    return;
+                }
+                
+                const result = await Swal.fire({
+                    title: '确定要清除已完成的任务吗？',
+                    text: `将清除 ${completedCount} 个已完成的任务，此操作不可恢复！`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '确定清除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                });
+
+                if (result.isConfirmed) {
+                    this.tasks = this.tasks.filter(t => !t.completed);
+                    await this.saveTasks();
+                    this.render();
+                    this.updateStats();
+                    
+                    Swal.fire({
+                        title: '清除成功！',
+                        text: `已清除 ${completedCount} 个已完成的任务。`,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            }
+            
+            async toggleTheme() {
+                this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+                try {
+                    await this.storage.setItem('theme', this.currentTheme);
+                } catch (error) {
+                    console.error('保存主题设置失败:', error);
+                }
+                this.applyTheme();
+            }
+            
+            applyTheme() {
+                const body = document.body;
+                const sunIcon = document.getElementById('sunIcon');
+                const moonIcon = document.getElementById('moonIcon');
+                
+                if (this.currentTheme === 'light') {
+                    body.className = 'light-theme theme-transition';
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                } else {
+                    body.className = 'dark-theme theme-transition';
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                }
+            }
+            
+            getFilteredTasks() {
+                switch (this.currentFilter) {
+                    case 'active':
+                        return this.tasks.filter(t => !t.completed);
+                    case 'completed':
+                        return this.tasks.filter(t => t.completed);
+                    default:
+                        return this.tasks;
+                }
+            }
+            
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffTime = now - date;
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) return '今天';
+                if (diffDays === 1) return '昨天';
+                if (diffDays < 7) return `${diffDays}天前`;
+                
+                return date.toLocaleDateString('zh-CN');
+            }
+            
+            render() {
+                const taskList = document.getElementById('taskList');
+                const filteredTasks = this.getFilteredTasks();
+                
+                taskList.innerHTML = '';
+                
+                filteredTasks.forEach(task => {
+                    const taskItem = document.createElement('div');
+                    taskItem.className = `task-item flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between rounded-lg theme-transition ${task.completed ? 'completed-task' : ''} fade-in`;
+                    taskItem.style.backgroundColor = 'var(--bg-primary)';
+                    
+                    taskItem.innerHTML = `
+                        <div class="flex items-center gap-4 flex-1">
+                            <div class="flex items-center justify-center rounded-lg shrink-0 size-12 theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M80,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H88A8,8,0,0,1,80,64Zm136,56H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex flex-col justify-center flex-1">
+                                <p class="task-text text-base font-medium leading-normal theme-transition" style="color: var(--text-primary); word-wrap: break-word; white-space: pre-wrap;" contenteditable="false">${task.text}</p>
+                                <p class="text-sm font-normal leading-normal line-clamp-2 theme-transition" style="color: var(--text-secondary);">创建于: ${this.formatDate(task.createdAt)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="edit-btn p-2 rounded-lg theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);" title="编辑">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96A16,16,0,0,0,227.31,73.37ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.69,147.31,64l24-24L216,84.69Z"></path>
+                                </svg>
+                            </button>
+                            <button class="delete-btn p-2 rounded-lg theme-transition" style="background-color: var(--bg-tertiary); color: var(--text-primary);" title="删除">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path>
+                                </svg>
+                            </button>
+                            <div class="flex size-7 items-center justify-center">
+                                <input
+                                    type="checkbox"
+                                    class="task-checkbox h-5 w-5 rounded border-2 bg-transparent focus:ring-0 focus:ring-offset-0 focus:outline-none theme-transition"
+                                    style="border-color: var(--border-color); color: var(--accent-color);"
+                                    ${task.completed ? 'checked' : ''}
+                                />
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 绑定事件
+                    const checkbox = taskItem.querySelector('.task-checkbox');
+                    const editBtn = taskItem.querySelector('.edit-btn');
+                    const deleteBtn = taskItem.querySelector('.delete-btn');
+                    const taskText = taskItem.querySelector('.task-text');
+                    
+                    checkbox.addEventListener('change', async () => await this.toggleTask(task.id));
+                    deleteBtn.addEventListener('click', async () => await this.deleteTask(task.id));
+                    
+                    editBtn.addEventListener('click', async () => {
+                        if (taskText.contentEditable === 'false') {
+                            taskText.contentEditable = 'true';
+                            taskText.focus();
+                            taskText.style.backgroundColor = 'var(--bg-secondary)';
+                            taskText.style.padding = '4px 8px';
+                            taskText.style.borderRadius = '4px';
+                        } else {
+                            taskText.contentEditable = 'false';
+                            taskText.style.backgroundColor = 'transparent';
+                            taskText.style.padding = '0';
+                            await this.editTask(task.id, taskText.textContent);
+                        }
+                    });
+                    
+                    taskText.addEventListener('keypress', async (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            taskText.contentEditable = 'false';
+                            taskText.style.backgroundColor = 'transparent';
+                            taskText.style.padding = '0';
+                            await this.editTask(task.id, taskText.textContent);
+                        }
+                    });
+                    
+                    taskText.addEventListener('blur', async () => {
+                        taskText.contentEditable = 'false';
+                        taskText.style.backgroundColor = 'transparent';
+                        taskText.style.padding = '0';
+                        await this.editTask(task.id, taskText.textContent);
+                    });
+                    
+                    taskList.appendChild(taskItem);
+                });
+                
+                this.updateEmptyState();
+            }
+            
+            updateEmptyState() {
+                const taskList = document.getElementById('taskList');
+                const emptyState = document.getElementById('emptyState');
+                const visibleTasks = taskList.querySelectorAll('.task-item:not([style*="display: none"])');
+                
+                if (visibleTasks.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                }
+            }
+            
+            updateStats() {
+                const totalCount = this.tasks.length;
+                const completedCount = this.tasks.filter(t => t.completed).length;
+                
+                document.getElementById('totalCount').textContent = totalCount;
+                document.getElementById('completedCount').textContent = completedCount;
+            }
+            
+            async saveTasks() {
+                try {
+                    await this.storage.setItem('tasks', this.tasks);
+                } catch (error) {
+                    console.error('保存任务数据失败:', error);
+                    // 降级到localStorage作为备份
+                    try {
+                        localStorage.setItem('tasks', JSON.stringify(this.tasks));
+                        console.log('已降级使用localStorage保存数据');
+                    } catch (fallbackError) {
+                        console.error('localStorage备份保存也失败:', fallbackError);
+                    }
+                 }
+             }
+             
+             // 数据迁移：从localStorage迁移到localForage
+             async migrateFromLocalStorage() {
+                 try {
+                     const oldTasks = localStorage.getItem('tasks');
+                     const oldTheme = localStorage.getItem('theme');
+                     
+                     if (oldTasks) {
+                         const tasks = JSON.parse(oldTasks);
+                         await this.storage.setItem('tasks', tasks);
+                         console.log('任务数据已从localStorage迁移到localForage');
+                     }
+                     
+                     if (oldTheme) {
+                         await this.storage.setItem('theme', oldTheme);
+                         console.log('主题设置已从localStorage迁移到localForage');
+                     }
+                     
+                     // 清理旧数据（可选）
+                     // localStorage.removeItem('tasks');
+                     // localStorage.removeItem('theme');
+                 } catch (error) {
+                     console.error('数据迁移失败:', error);
+                 }
+             }
+             
+             // 导出数据
+             async exportData() {
+                 try {
+                     const tasks = await this.storage.getItem('tasks') || [];
+                     const theme = await this.storage.getItem('theme') || 'dark';
+                     
+                     const exportData = {
+                         tasks,
+                         theme,
+                         exportDate: new Date().toISOString(),
+                         version: '1.0'
+                     };
+                     
+                     const dataStr = JSON.stringify(exportData, null, 2);
+                     
+                     // 提供两种导出方式：下载文件和复制到剪贴板
+                    const result = await Swal.fire({
+                        title: '选择导出方式',
+                        text: '请选择您希望的导出方式',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3b82f6',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: '下载文件',
+                        cancelButtonText: '复制到剪贴板',
+                        reverseButtons: true
+                    });
+                    
+                    if (result.isConfirmed) {
+                         // 下载文件
+                         const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                         const link = document.createElement('a');
+                         link.href = URL.createObjectURL(dataBlob);
+                         link.download = `taskmaster-backup-${new Date().toISOString().split('T')[0]}.json`;
+                         link.click();
+                         Swal.fire({
+                             title: '导出成功！',
+                             text: '数据已导出为文件',
+                             icon: 'success',
+                             timer: 1500,
+                             showConfirmButton: false
+                         });
+                     } else if (result.dismiss === Swal.DismissReason.cancel) {
+                         // 复制到剪贴板
+                         await navigator.clipboard.writeText(dataStr);
+                         Swal.fire({
+                             title: '导出成功！',
+                             text: '数据已复制到剪贴板',
+                             icon: 'success',
+                             timer: 1500,
+                             showConfirmButton: false
+                         });
+                     }
+                     
+                     console.log('数据导出成功');
+                 } catch (error) {
+                     console.error('数据导出失败:', error);
+                     Swal.fire({
+                         title: '导出失败',
+                         text: '数据导出失败，请重试',
+                         icon: 'error',
+                         confirmButtonText: '确定'
+                     });
+                 }
+             }
+             
+             // 导入数据（从文件）
+             async importData(file) {
+                 try {
+                     const text = await file.text();
+                     await this.importFromText(text);
+                 } catch (error) {
+                     console.error('文件读取失败:', error);
+                     Swal.fire({
+                         title: '文件读取失败',
+                         text: '请检查文件格式是否正确',
+                         icon: 'error',
+                         confirmButtonText: '确定'
+                     });
+                 }
+             }
+             
+             // 从文本导入数据（支持文件和剪贴板）
+             async importFromText(text) {
+                 try {
+                     const data = JSON.parse(text);
+                     
+                     // 验证数据格式
+                     if (!data || typeof data !== 'object') {
+                         throw new Error('无效的数据格式');
+                     }
+                     
+                     let importCount = 0;
+                     
+                     if (data.tasks && Array.isArray(data.tasks)) {
+                         // 询问是否覆盖现有数据
+                         let shouldOverwrite = this.tasks.length === 0;
+                         
+                         if (this.tasks.length > 0) {
+                             const result = await Swal.fire({
+                                 title: '数据导入选项',
+                                 html: `当前有 <strong>${this.tasks.length}</strong> 个任务<br>导入的数据有 <strong>${data.tasks.length}</strong> 个任务`,
+                                 icon: 'question',
+                                 showCancelButton: true,
+                                 confirmButtonColor: '#ef4444',
+                                 cancelButtonColor: '#3b82f6',
+                                 confirmButtonText: '覆盖现有数据',
+                                 cancelButtonText: '合并数据',
+                                 reverseButtons: true
+                             });
+                             shouldOverwrite = result.isConfirmed;
+                         }
+                         
+                         if (shouldOverwrite) {
+                             this.tasks = data.tasks;
+                         } else {
+                             // 合并数据，避免ID冲突
+                             const maxId = this.tasks.length > 0 ? Math.max(...this.tasks.map(t => t.id)) : 0;
+                             const newTasks = data.tasks.map((task, index) => ({
+                                 ...task,
+                                 id: maxId + index + 1
+                             }));
+                             this.tasks = [...this.tasks, ...newTasks];
+                         }
+                         
+                         await this.storage.setItem('tasks', this.tasks);
+                         importCount += data.tasks.length;
+                     }
+                     
+                     if (data.theme) {
+                         await this.storage.setItem('theme', data.theme);
+                         this.currentTheme = data.theme;
+                         this.applyTheme();
+                     }
+                     
+                     this.render();
+                     this.updateStats();
+                     console.log('数据导入成功');
+                     Swal.fire({
+                         title: '导入成功！',
+                         html: `导入了 <strong>${importCount}</strong> 个任务${data.theme ? '和主题设置' : ''}`,
+                         icon: 'success',
+                         timer: 2000,
+                         showConfirmButton: false
+                     });
+                 } catch (error) {
+                     console.error('数据导入失败:', error);
+                     Swal.fire({
+                         title: '导入失败',
+                         text: '请检查数据格式是否正确',
+                         icon: 'error',
+                         confirmButtonText: '确定'
+                     });
+                 }
+             }
+             
+             // 从剪贴板导入数据
+             async importFromClipboard() {
+                 try {
+                     const text = await navigator.clipboard.readText();
+                     if (!text.trim()) {
+                         Swal.fire({
+                             title: '剪贴板为空',
+                             text: '请先复制有效的数据到剪贴板',
+                             icon: 'info',
+                             confirmButtonText: '确定'
+                         });
+                         return;
+                     }
+                     await this.importFromText(text);
+                 } catch (error) {
+                     console.error('从剪贴板导入失败:', error);
+                     Swal.fire({
+                         title: '导入失败',
+                         text: '请确保剪贴板包含有效的JSON数据',
+                         icon: 'error',
+                         confirmButtonText: '确定'
+                     });
+                 }
+             }
+             
+             // 清空所有数据
+             async clearAllData() {
+                 const result = await Swal.fire({
+                     title: '确定要清空所有数据吗？',
+                     text: '此操作将删除所有任务和设置，且不可恢复！',
+                     icon: 'warning',
+                     showCancelButton: true,
+                     confirmButtonColor: '#ef4444',
+                     cancelButtonColor: '#6b7280',
+                     confirmButtonText: '确定清空',
+                     cancelButtonText: '取消',
+                     reverseButtons: true
+                 });
+
+                 if (result.isConfirmed) {
+                     try {
+                         await this.storage.clear();
+                         this.tasks = [];
+                         this.currentTheme = 'dark';
+                         this.applyTheme();
+                         this.render();
+                         this.updateStats();
+                         console.log('所有数据已清空');
+                         
+                         Swal.fire({
+                             title: '清空成功！',
+                             text: '所有数据已清空',
+                             icon: 'success',
+                             timer: 1500,
+                             showConfirmButton: false
+                         });
+                     } catch (error) {
+                         console.error('清空数据失败:', error);
+                         Swal.fire({
+                             title: '清空失败',
+                             text: '清空数据时发生错误，请重试',
+                             icon: 'error',
+                             confirmButtonText: '确定'
+                         });
+                     }
+                 }
+             }
+         }
+         
+         // 初始化应用
+         document.addEventListener('DOMContentLoaded', () => {
+             const taskManager = new TaskManager();
+             
+             // 在控制台提供一些实用方法
+             window.TaskMaster = {
+                 exportData: () => taskManager.exportData(),
+                 clearAllData: () => taskManager.clearAllData(),
+                 migrateFromLocalStorage: () => taskManager.migrateFromLocalStorage(),
+                 getStorageInfo: async () => {
+                     try {
+                         const tasks = await taskManager.storage.getItem('tasks') || [];
+                         const theme = await taskManager.storage.getItem('theme') || 'dark';
+                         console.log('存储信息:', {
+                             tasksCount: tasks.length,
+                             theme: theme,
+                             storageDriver: taskManager.storage.driver(),
+                             databaseName: taskManager.storage._config.name
+                         });
+                     } catch (error) {
+                         console.error('获取存储信息失败:', error);
+                     }
+                 }
+             };
+             
+             console.log('TaskMaster 已加载！');
+             console.log('可用命令:');
+             console.log('- TaskMaster.exportData() - 导出数据');
+             console.log('- TaskMaster.clearAllData() - 清空所有数据');
+             console.log('- TaskMaster.migrateFromLocalStorage() - 从localStorage迁移数据');
+             console.log('- TaskMaster.getStorageInfo() - 查看存储信息');
+         });
+    </script>
+</body>
+</html>

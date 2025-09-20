@@ -1,0 +1,189 @@
+{
+  "tasks": [
+    {
+      "id": 1757920087136,
+      "text": "媒体界面的返回和媒体区分开，左右结构，不要放在媒体上面。",
+      "completed": true,
+      "createdAt": "2025-09-15T07:08:07.136Z",
+      "dueDate": null,
+      "completedAt": "2025-09-16T09:27:40.099Z"
+    },
+    {
+      "id": 1757901662540,
+      "text": "去掉全部多余ui显示，只保留数字人。",
+      "completed": false,
+      "createdAt": "2025-09-15T02:01:02.540Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757901657780,
+      "text": "mp4兼容性问题",
+      "completed": false,
+      "createdAt": "2025-09-15T02:00:57.780Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757901651855,
+      "text": "【优先】降噪，过滤环境噪音和非正常语音。参考洲明。",
+      "completed": false,
+      "createdAt": "2025-09-15T02:00:51.855Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757901643470,
+      "text": "增加一个手动唤醒按钮",
+      "completed": false,
+      "createdAt": "2025-09-15T02:00:43.470Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757900141638,
+      "text": "纠正不准确，有同学问：校长是谁？ 纠正结果:校校长是谁？",
+      "completed": false,
+      "createdAt": "2025-09-15T01:35:41.638Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757900136940,
+      "text": "要靠得很近才能唤醒(环境是有一点嘈杂)，软件硬件都要优化。",
+      "completed": false,
+      "createdAt": "2025-09-15T01:35:36.940Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757900131634,
+      "text": "用的人说，三次有一次不行",
+      "completed": false,
+      "createdAt": "2025-09-15T01:35:31.634Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757900110328,
+      "text": "媒体界面不操作不会自动返回",
+      "completed": true,
+      "createdAt": "2025-09-15T01:35:10.328Z",
+      "dueDate": null,
+      "completedAt": "2025-09-15T03:21:58.605Z"
+    },
+    {
+      "id": 1757900097930,
+      "text": "提示条显示时机偶尔不对",
+      "completed": false,
+      "createdAt": "2025-09-15T01:34:57.930Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757667229465,
+      "text": "命中缓存之后，不显示文本。",
+      "completed": true,
+      "createdAt": "2025-09-12T08:53:49.465Z",
+      "dueDate": null,
+      "completedAt": "2025-09-15T01:34:34.550Z"
+    },
+    {
+      "id": 1757661044165,
+      "text": "增加自动滑屏",
+      "completed": false,
+      "createdAt": "2025-09-12T07:10:44.165Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757649167626,
+      "text": "视频截图要显示第一帧为视频封面",
+      "completed": true,
+      "createdAt": "2025-09-12T03:52:47.626Z",
+      "dueDate": null,
+      "completedAt": "2025-09-12T09:08:06.510Z"
+    },
+    {
+      "id": 1757497577610,
+      "text": "测试延迟不要使用google.com去测试，我是本地，不联网的。它那个地址应该写我设置界面输入的`后端服务器地址`",
+      "completed": true,
+      "createdAt": "2025-09-10T09:46:17.610Z",
+      "dueDate": null,
+      "updatedAt": "2025-09-10T09:56:33.811Z",
+      "completedAt": "2025-09-10T10:11:10.541Z"
+    },
+    {
+      "id": 1757497562386,
+      "text": "我点击了红色打断按钮，音频播放完毕当前的这段音频才停止，这是不合理的。",
+      "completed": true,
+      "createdAt": "2025-09-10T09:46:02.386Z",
+      "dueDate": null,
+      "completedAt": "2025-09-15T03:22:51.227Z"
+    },
+    {
+      "id": 1757497556070,
+      "text": "命中了缓存没有回复",
+      "completed": true,
+      "createdAt": "2025-09-10T09:45:56.070Z",
+      "dueDate": null,
+      "completedAt": "2025-09-15T01:35:45.490Z"
+    },
+    {
+      "id": 1757497551756,
+      "text": "没有音频播放了，音浪还在显示",
+      "completed": true,
+      "createdAt": "2025-09-10T09:45:51.756Z",
+      "dueDate": null,
+      "completedAt": "2025-09-12T09:07:54.869Z"
+    },
+    {
+      "id": 1757497546478,
+      "text": "data数据好像不是最新的",
+      "completed": false,
+      "createdAt": "2025-09-10T09:45:46.478Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757497522926,
+      "text": "开场白页面显示 说出提示词开始对话提示条",
+      "completed": false,
+      "createdAt": "2025-09-10T09:45:22.926Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757497511382,
+      "text": "当我切换应用的时候，数字人还是还是会后台播放，不合理。",
+      "completed": false,
+      "createdAt": "2025-09-10T09:45:11.382Z",
+      "dueDate": null
+    },
+    {
+      "id": 1757497435622,
+      "text": "当我点开音色按钮的时候 这时候数字人不应该继续播报。",
+      "completed": true,
+      "createdAt": "2025-09-10T09:43:55.622Z",
+      "dueDate": null,
+      "completedAt": "2025-09-10T09:43:57.714Z"
+    },
+    {
+      "id": 1757497419270,
+      "text": "应用音色需要点两次",
+      "completed": true,
+      "createdAt": "2025-09-10T09:43:39.270Z",
+      "dueDate": null,
+      "completedAt": "2025-09-12T03:52:57.726Z"
+    },
+    {
+      "id": 1757497412756,
+      "text": "音色去掉男- 以及 女-",
+      "completed": true,
+      "createdAt": "2025-09-10T09:43:32.756Z",
+      "dueDate": null,
+      "completedAt": "2025-09-12T03:52:55.022Z"
+    },
+    {
+      "id": 1757497394260,
+      "text": "后端返回的视频正确性检查",
+      "completed": true,
+      "createdAt": "2025-09-10T09:43:14.260Z",
+      "dueDate": null,
+      "updatedAt": "2025-09-10T09:43:24.052Z",
+      "completedAt": "2025-09-12T03:53:01.042Z"
+    }
+  ],
+  "theme": "light",
+  "exportDate": "2025-09-16T10:08:40.047Z",
+  "version": "1.0"
+}
