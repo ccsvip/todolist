@@ -71,6 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
         id: data.id,
         username: data.username,
         email: data.email,
+        avatar_url: data.avatar_url,
         created_at: data.created_at
       }
 
@@ -122,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
         id: users.id,
         username: users.username,
         email: users.email,
+        avatar_url: users.avatar_url,
         created_at: users.created_at,
         last_login: new Date().toISOString()
       }
@@ -167,6 +169,7 @@ export const useAuthStore = defineStore('auth', () => {
         id: data.id,
         username: data.username,
         email: data.email,
+        avatar_url: data.avatar_url,
         created_at: data.created_at,
         last_login: data.last_login
       }
@@ -229,6 +232,46 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // 更新头像
+  const updateAvatar = async (avatarUrl) => {
+    if (!user.value) return { success: false, error: '未登录' }
+
+    loading.value = true
+    error.value = null
+
+    try {
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.value.id)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      // 更新本地用户信息
+      const userData = {
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        last_login: data.last_login
+      }
+
+      user.value = userData
+      localStorage.setItem('user', JSON.stringify(userData))
+
+      return { success: true, user: userData }
+    } catch (err) {
+      error.value = err.message
+      console.error('更新头像失败:', err)
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     user,
     loading,
@@ -239,6 +282,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     updateProfile,
-    changePassword
+    changePassword,
+    updateAvatar
   }
 })

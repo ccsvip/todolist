@@ -15,7 +15,7 @@
     </div>
 
     <!-- 已登录时显示主应用 -->
-    <div v-else class="app-container" :class="{ dark: taskStore.isDark }">
+    <div v-else class="app-container">
       <el-container>
         <!-- 头部 -->
         <el-header class="app-header">
@@ -35,22 +35,20 @@
               class="search-input"
             />
 
-            <el-tooltip content="切换主题" placement="bottom">
-              <el-button
-                :icon="taskStore.isDark ? Sunny : Moon"
-                circle
-                @click="taskStore.toggleTheme()"
-              />
-            </el-tooltip>
-
             <el-dropdown @command="handleUserCommand">
-              <el-avatar style="cursor: pointer">
-                {{ authStore.user?.username?.charAt(0).toUpperCase() }}
+              <el-avatar style="cursor: pointer" :src="authStore.user?.avatar_url">
+                <span v-if="!authStore.user?.avatar_url">
+                  {{ authStore.user?.username?.charAt(0).toUpperCase() }}
+                </span>
               </el-avatar>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item disabled>
                     {{ authStore.user?.username }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="change-avatar">
+                    <el-icon><Picture /></el-icon>
+                    更换头像
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>
@@ -100,7 +98,7 @@
                   </el-button>
                   <el-button
                     :icon="Download"
-                    @click="taskStore.exportData()"
+                    @click="handleExport"
                   >
                     导出
                   </el-button>
@@ -162,6 +160,9 @@
         </el-main>
       </el-container>
 
+      <!-- 头像上传对话框 -->
+      <AvatarUpload v-model="showAvatarUpload" />
+
       <!-- 导入文件对话框 -->
       <input
         ref="fileInput"
@@ -180,38 +181,41 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Calendar,
   Search,
-  Sunny,
-  Moon,
   Delete,
   Download,
   Upload,
   Plus,
   Document,
-  SwitchButton
+  SwitchButton,
+  Picture
 } from '@element-plus/icons-vue'
 import { useTaskStore } from './stores/taskStore'
 import { useAuthStore } from './stores/authStore'
 import TaskItem from './components/TaskItem.vue'
 import LoginForm from './components/LoginForm.vue'
 import RegisterForm from './components/RegisterForm.vue'
+import AvatarUpload from './components/AvatarUpload.vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 const taskStore = useTaskStore()
 const authStore = useAuthStore()
 const newTaskText = ref('')
-const fileInput = ref(null)
 const locale = zhCn
 const showLogin = ref(true)
+const showAvatarUpload = ref(false)
+const fileInput = ref(null)
 
 onMounted(async () => {
   await authStore.init()
-  if (authStore.isAuthenticated) {
-    taskStore.init()
+  if (authStore.isAuthenticated && authStore.user?.id) {
+    taskStore.init(authStore.user.id)
   }
 })
 
 const handleAuthSuccess = () => {
-  taskStore.init()
+  if (authStore.user?.id) {
+    taskStore.init(authStore.user.id)
+  }
 }
 
 const handleUserCommand = async (command) => {
@@ -231,6 +235,8 @@ const handleUserCommand = async (command) => {
     } catch {
       // 用户取消
     }
+  } else if (command === 'change-avatar') {
+    showAvatarUpload.value = true
   }
 }
 
@@ -290,6 +296,30 @@ const handleClearAll = async () => {
   }
 }
 
+const handleExport = async () => {
+  try {
+    const tasks = taskStore.tasks
+    const exportData = {
+      tasks,
+      exportDate: new Date().toISOString(),
+      version: '2.0',
+      userId: authStore.user?.id
+    }
+
+    const dataStr = JSON.stringify(exportData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(dataBlob)
+    link.download = `taskmaster-backup-${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+
+    ElMessage.success('数据导出成功')
+  } catch (error) {
+    console.error('数据导出失败:', error)
+    ElMessage.error('数据导出失败')
+  }
+}
+
 const handleImport = () => {
   fileInput.value.click()
 }
@@ -299,25 +329,46 @@ const handleFileChange = async (event) => {
   if (!file) return
 
   try {
+    console.log('开始处理文件:', file.name)
     const text = await file.text()
     console.log('文件内容:', text)
-
+    
     const data = JSON.parse(text)
     console.log('解析后的数据:', data)
 
-    await taskStore.importData(data)
+    if (!data || typeof data !== 'object') {
+      throw new Error('无效的数据格式')
+    }
+
+    if (!data.tasks || !Array.isArray(data.tasks)) {
+      throw new Error('数据中缺少 tasks 字段或格式不正确')
+    }
+
+    if (data.tasks.length === 0) {
+      ElMessage.warning('导入的数据中没有任务')
+      return
+    }
+
+    console.log('准备导入', data.tasks.length, '个任务')
+
+    // 导入任务到数据库
+    await taskStore.importTasks(data.tasks)
+    
+    console.log('导入完成')
+    ElMessage.success(`成功导入 ${data.tasks.length} 个任务`)
   } catch (error) {
     console.error('文件处理失败:', error)
+    console.error('错误堆栈:', error.stack)
     if (error instanceof SyntaxError) {
       ElMessage.error('JSON 格式错误，请检查文件格式')
     } else {
       ElMessage.error(`文件导入失败: ${error.message}`)
     }
   } finally {
-    // 清空文件选择
     event.target.value = ''
   }
 }
+
 </script>
 
 <style>
@@ -334,13 +385,8 @@ const handleFileChange = async (event) => {
 
 .app-container {
   min-height: 100vh;
-  background-color: var(--el-bg-color-page);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
   transition: background-color 0.3s;
-}
-
-/* 深色模式 */
-.dark {
-  --el-bg-color-page: #141414;
 }
 
 /* 头部样式 */
@@ -349,9 +395,10 @@ const handleFileChange = async (event) => {
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
-  background-color: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .header-left {
@@ -410,6 +457,10 @@ const handleFileChange = async (event) => {
 /* 筛选卡片 */
 .filter-card {
   margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 .filter-section {
@@ -428,11 +479,19 @@ const handleFileChange = async (event) => {
 /* 添加任务卡片 */
 .add-task-card {
   margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* 任务列表卡片 */
 .task-list-card {
   min-height: 400px;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 .task-list {

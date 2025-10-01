@@ -25,6 +25,11 @@
                 "serena",
                 "start-mcp-server"
             ]
+        },
+        "exa": {
+            "type": "http",
+            "url": "https://mcp.exa.ai/mcp",
+            "headers": {}
         }
     }
 }

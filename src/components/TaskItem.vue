@@ -120,15 +120,18 @@ const formatDate = (dateString) => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background-color: var(--el-bg-color);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
   border-radius: 8px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .task-item:hover {
   border-color: var(--el-color-primary);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .task-item.completed {
