@@ -1,0 +1,30 @@
+{
+    "mcpServers": {
+        "supabase": {
+            "command": "cmd",
+            "args": [
+                "/c",
+                "npx",
+                "-y",
+                "@supabase/mcp-server-supabase",
+                "--project-ref=gqdtabkntozriqnrwlme"
+            ],
+            "env": {
+                "SUPABASE_ACCESS_TOKEN": "sbp_b3ed493b5e5b657cea39a6ddb941a7142f8c16a1"
+            }
+        },
+        "serena": {
+            "disabled": false,
+            "timeout": 60,
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "C:\\Users\\cancer\\Desktop\\serena",
+                "serena",
+                "start-mcp-server"
+            ]
+        }
+    }
+}

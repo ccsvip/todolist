@@ -1,6 +1,21 @@
 <template>
   <el-config-provider :locale="locale">
-    <div class="app-container" :class="{ dark: taskStore.isDark }">
+    <!-- 未登录时显示登录/注册页面 -->
+    <div v-if="!authStore.isAuthenticated">
+      <LoginForm
+        v-if="showLogin"
+        @login-success="handleAuthSuccess"
+        @switch-to-register="showLogin = false"
+      />
+      <RegisterForm
+        v-else
+        @register-success="handleAuthSuccess"
+        @switch-to-login="showLogin = true"
+      />
+    </div>
+
+    <!-- 已登录时显示主应用 -->
+    <div v-else class="app-container" :class="{ dark: taskStore.isDark }">
       <el-container>
         <!-- 头部 -->
         <el-header class="app-header">
@@ -28,9 +43,22 @@
               />
             </el-tooltip>
 
-            <el-avatar
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWOtnddhOfkS20zlLdTBLfg23-Bk8F7Etkc_ohqsTwv7hb5cgTop-BT58cRBlTYolrjHPWuwZOijOIvdolxlH3Ylg0-y8t9OCJ_KcsiLuIJUVgYso32m4hB3o9pLY4pyJulOR6vr55c_WBLG-Q8GUUu0Ga0ccPhzawWelgncPKdxjAfyeAuWXCLFeilwW-AxA8GhhPy3azQ7ehlgeFzHZpVPe0P3Ah9WEI9jYSx7fc2VnJZZWSCInCm56v5NXwOT_HhB20SdfG7rE"
-            />
+            <el-dropdown @command="handleUserCommand">
+              <el-avatar style="cursor: pointer">
+                {{ authStore.user?.username?.charAt(0).toUpperCase() }}
+              </el-avatar>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item disabled>
+                    {{ authStore.user?.username }}
+                  </el-dropdown-item>
+                  <el-dropdown-item divided command="logout">
+                    <el-icon><SwitchButton /></el-icon>
+                    退出登录
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </el-header>
 
@@ -158,20 +186,53 @@ import {
   Download,
   Upload,
   Plus,
-  Document
+  Document,
+  SwitchButton
 } from '@element-plus/icons-vue'
 import { useTaskStore } from './stores/taskStore'
+import { useAuthStore } from './stores/authStore'
 import TaskItem from './components/TaskItem.vue'
+import LoginForm from './components/LoginForm.vue'
+import RegisterForm from './components/RegisterForm.vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 const taskStore = useTaskStore()
+const authStore = useAuthStore()
 const newTaskText = ref('')
 const fileInput = ref(null)
 const locale = zhCn
+const showLogin = ref(true)
 
-onMounted(() => {
-  taskStore.init()
+onMounted(async () => {
+  await authStore.init()
+  if (authStore.isAuthenticated) {
+    taskStore.init()
+  }
 })
+
+const handleAuthSuccess = () => {
+  taskStore.init()
+}
+
+const handleUserCommand = async (command) => {
+  if (command === 'logout') {
+    try {
+      await ElMessageBox.confirm(
+        '确定要退出登录吗？',
+        '退出登录',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      authStore.logout()
+      ElMessage.success('已退出登录')
+    } catch {
+      // 用户取消
+    }
+  }
+}
 
 const handleAddTask = () => {
   if (newTaskText.value.trim()) {
