@@ -28,7 +28,7 @@ TaskMaster 是一个功能强大且界面简洁的待办事项（To-Do）管理�
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/your-username/taskmaster-vue.git
+   git clone https://github.com/ccsvip/todolist.git
    cd taskmaster-vue
    ```
 
@@ -39,7 +39,7 @@ TaskMaster 是一个功能强大且界面简洁的待办事项（To-Do）管理�
    ```
 
 3. **启动开发服务器**
-   运行以下命令以启动本地开发服务器。应用将在 `http://localhost:5173` 上可用。
+   运行以下命令以启动本地开发服务器。应用将在 `http://localhost:3000` 上可用。
    ```bash
    npm run dev
    ```
