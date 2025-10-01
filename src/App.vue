@@ -212,9 +212,11 @@ onMounted(async () => {
   }
 })
 
-const handleAuthSuccess = () => {
-  if (authStore.user?.id) {
-    taskStore.init(authStore.user.id)
+const handleAuthSuccess = async (user) => {
+  // 使用传入的 user 参数，或者从 authStore 获取
+  const userId = user?.id || authStore.user?.id
+  if (userId) {
+    await taskStore.init(userId)
   }
 }
 
