@@ -224,10 +224,7 @@ export const useTaskStore = defineStore('task', {
       this.searchQuery = query
     },
 
-    async importTasks(tasks) {
-      console.log('开始导入任务:', tasks)
-      console.log('当前用户 ID:', this.userId)
-      
+    async importTasks(tasks, shouldOverwrite = false) {
       if (!this.userId) {
         throw new Error('用户未登录，无法导入任务')
       }
@@ -237,15 +234,25 @@ export const useTaskStore = defineStore('task', {
       }
 
       try {
-        // 准备导入的任务数据
+        // 如果选择覆盖，先删除所有现有任务
+        if (shouldOverwrite && this.tasks.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('user_id', this.userId)
+
+          if (deleteError) throw deleteError
+        }
+
+        // 准备导入的任务数据，保留原始日期
         const tasksToImport = tasks.map(task => ({
           user_id: this.userId,
           text: task.text || '',
           completed: task.completed || false,
-          completed_at: task.completed_at || null
+          completed_at: task.completed_at || task.completedAt || null,
+          created_at: task.created_at || task.createdAt || new Date().toISOString(),
+          updated_at: task.updated_at || task.updatedAt || null
         }))
-
-        console.log('准备插入的任务数据:', tasksToImport)
 
         // 批量插入到数据库
         const { data, error } = await supabase
@@ -253,16 +260,10 @@ export const useTaskStore = defineStore('task', {
           .insert(tasksToImport)
           .select()
 
-        if (error) {
-          console.error('数据库插入错误:', error)
-          throw error
-        }
-
-        console.log('插入成功，返回数据:', data)
+        if (error) throw error
 
         // 重新加载任务列表
         await this.loadTasks()
-        console.log('任务列表已重新加载')
       } catch (error) {
         console.error('导入任务失败:', error)
         throw error

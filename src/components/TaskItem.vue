@@ -20,7 +20,7 @@
           <p class="task-text">{{ task.text }}</p>
           <p class="task-meta">
             <el-icon><Clock /></el-icon>
-            创建于: {{ formatDate(task.createdAt) }}
+            创建于: {{ formatDate(task.created_at) }}
           </p>
         </div>
       </div>

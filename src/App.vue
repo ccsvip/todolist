@@ -329,12 +329,8 @@ const handleFileChange = async (event) => {
   if (!file) return
 
   try {
-    console.log('开始处理文件:', file.name)
     const text = await file.text()
-    console.log('文件内容:', text)
-    
     const data = JSON.parse(text)
-    console.log('解析后的数据:', data)
 
     if (!data || typeof data !== 'object') {
       throw new Error('无效的数据格式')
@@ -349,16 +345,41 @@ const handleFileChange = async (event) => {
       return
     }
 
-    console.log('准备导入', data.tasks.length, '个任务')
+    // 如果当前有任务，询问用户是覆盖还是合并
+    let shouldOverwrite = taskStore.tasks.length === 0
+
+    if (taskStore.tasks.length > 0) {
+      const result = await ElMessageBox.confirm(
+        `当前有 ${taskStore.tasks.length} 个任务，导入的数据有 ${data.tasks.length} 个任务`,
+        '数据导入选项',
+        {
+          distinguishCancelAndClose: true,
+          confirmButtonText: '覆盖现有数据',
+          cancelButtonText: '合并数据',
+          type: 'warning',
+          center: true
+        }
+      ).then(() => true)
+        .catch((action) => {
+          if (action === 'cancel') {
+            return false // 合并
+          }
+          throw new Error('用户取消导入')
+        })
+      
+      shouldOverwrite = result
+    }
 
     // 导入任务到数据库
-    await taskStore.importTasks(data.tasks)
+    await taskStore.importTasks(data.tasks, shouldOverwrite)
     
-    console.log('导入完成')
     ElMessage.success(`成功导入 ${data.tasks.length} 个任务`)
   } catch (error) {
+    if (error.message === '用户取消导入') {
+      // 用户取消，不显示错误
+      return
+    }
     console.error('文件处理失败:', error)
-    console.error('错误堆栈:', error.stack)
     if (error instanceof SyntaxError) {
       ElMessage.error('JSON 格式错误，请检查文件格式')
     } else {
